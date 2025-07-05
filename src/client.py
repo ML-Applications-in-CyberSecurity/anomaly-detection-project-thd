@@ -2,11 +2,16 @@ import socket
 import json
 import pandas as pd
 import joblib
+from environs import Env
 
+
+env = Env()
+env.read_env()
 HOST = 'localhost'
 PORT = 9999
 
 model = joblib.load("anomaly_model.joblib")
+together.api_key = env("API_KEY")
 
 def pre_process_data(data):
     # Convert data to DataFrame for model prediction
