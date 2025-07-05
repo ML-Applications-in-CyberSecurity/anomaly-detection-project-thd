@@ -16,8 +16,15 @@ together.api_key = env("API_KEY")
 def pre_process_data(data):
     # Convert data to DataFrame for model prediction
     df = pd.DataFrame([data])
-    #TODO 2: Here you have to add code to pre-process the data as per your model requirements.
-    return df
+    # One-hot encode protocol column
+    df = pd.get_dummies(df, columns=['protocol'], drop_first=True)
+    # If the protocol is only 'TCP', the 'protocol_UDP' column won't be created
+    # We add it manually to match the training data structure
+    if 'protocol_UDP' not in df.columns:
+        df['protocol_UDP'] = 0
+    # Sorting columns
+    df = df[['src_port', 'dst_port', 'packet_size', 'duration_ms', 'protocol_UDP']]
+    return df.astype(int).to_numpy()
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.connect((HOST, PORT))
