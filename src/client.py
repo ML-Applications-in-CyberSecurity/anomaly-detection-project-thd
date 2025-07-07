@@ -4,6 +4,8 @@ import pandas as pd
 import joblib
 from together import Together
 from environs import Env
+from datetime import datetime
+import os
 
 
 env = Env()
@@ -65,6 +67,23 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                         stream=False
                     )
                     label_response = response.choices[0].message.content.strip()
+                    # Prepare anomaly record
+                    anomaly_record = pd.DataFrame([{
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "src_port": data["src_port"],
+                        "dst_port": data["dst_port"],
+                        "packet_size": data["packet_size"],
+                        "duration_ms": data["duration_ms"],
+                        "protocol": data["protocol"],
+                        "llm_label": label_response
+                    }])
+                    # Path to csv file
+                    csv_file = "anomalies_log.csv"
+                    # If file exists, appand without header; otherwise, write with header
+                    if os.path.isfile(csv_file):
+                        anomaly_record.to_csv(csv_file, mode='a', header=False, index=False)
+                    else:
+                        anomaly_record.to_csv(csv_file, mode='w', header=True, index=False)
                     print(f"\n Anomaly Details: \n{label_response}\n")
                 else:
                     print("Normal Traffic. \n")
