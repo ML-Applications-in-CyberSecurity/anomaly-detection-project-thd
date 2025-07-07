@@ -4,7 +4,7 @@ import pandas as pd
 import joblib
 from together import Together
 from environs import Env
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 
 
@@ -69,7 +69,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     label_response = response.choices[0].message.content.strip()
                     # Prepare anomaly record
                     anomaly_record = pd.DataFrame([{
-                        "timestamp": datetime.utcnow().isoformat(),
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
                         "src_port": data["src_port"],
                         "dst_port": data["dst_port"],
                         "packet_size": data["packet_size"],
