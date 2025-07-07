@@ -14,6 +14,7 @@ HOST = 'localhost'
 PORT = 9999
 
 model = joblib.load("anomaly_model.joblib")
+scaler = joblib.load("confidence_scaler.joblib")
 
 # Initialize Together.ai client
 client = Together(api_key=env("API_KEY"))
@@ -51,9 +52,12 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 
                 processed_data = pre_process_data(data)
                 prediction = model.predict(processed_data)[0]
+                score_raw = model.decision_function(processed_data)[0]  # raw score
+                score_scaled = scaler.transform([[score_raw]])[0][0]    # normalized between 0 and 1
 
                 if prediction == -1:
                     print("Anomaly Detected")
+                    print(f"Confidence Score: {score_scaled:.2f}")
 
                     messages = [
                         {"role": "system", "content": "You are a helpful assitant that labels sensor anomalies."},
@@ -75,6 +79,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                         "packet_size": data["packet_size"],
                         "duration_ms": data["duration_ms"],
                         "protocol": data["protocol"],
+                        "confidence_score": score_scaled,
                         "llm_label": label_response
                     }])
                     # Path to csv file
@@ -87,6 +92,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     print(f"\n Anomaly Details: \n{label_response}\n")
                 else:
                     print("Normal Traffic. \n")
-
+                    print(f"Confidence Score: {score_scaled:.2f}")
+                print("_" * 70)
             except json.JSONDecodeError:
                 print("Error decoding JSON.")
