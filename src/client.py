@@ -2,6 +2,7 @@ import socket
 import json
 import pandas as pd
 import joblib
+from together import Together
 from environs import Env
 
 
@@ -11,7 +12,10 @@ HOST = 'localhost'
 PORT = 9999
 
 model = joblib.load("anomaly_model.joblib")
-together.api_key = env("API_KEY")
+
+# Initialize Together.ai client
+client = Together(api_key=env("API_KEY"))
+LLM_MODEL = "deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free" # DeepSeek LLaMA B70 3LLM equivalent
 
 def pre_process_data(data):
     # Convert data to DataFrame for model prediction
@@ -43,9 +47,27 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 data = json.loads(line)
                 print(f'Data Received:\n{data}\n')
 
-                #TODO 3: Here you have to add code to process the received data and detect anomalies using a trained model.
+                processed_data = pre_process_data(data)
+                prediction = model.predict(processed_data)[0]
 
-                #TODO 4: Here you have to connect to a LLM using together ai with your api code to caption the alert for data and anomalies detected.
+                if prediction == -1:
+                    print("Anomaly Detected")
+
+                    messages = [
+                        {"role": "system", "content": "You are a helpful assitant that labels sensor anomalies."},
+                        {"role": "user", "content": f"Sensor reading: {data}\nDescribe the type of anomaly and suggest a possible cause."}
+                    ]
+                    response = client.chat.completions.create(
+                        model=LLM_MODEL,
+                        messages=messages,
+                        temperature=0.7,
+                        max_tokens=300,
+                        stream=False
+                    )
+                    label_response = response.choices[0].message.content.strip()
+                    print(f"\n Anomaly Details: \n{label_response}\n")
+                else:
+                    print("Normal Traffic. \n")
 
             except json.JSONDecodeError:
                 print("Error decoding JSON.")
